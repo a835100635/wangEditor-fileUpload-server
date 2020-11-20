@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+</head>
+<body>
+    <input type="file" id="file" onchange="selectFile()">
+    <script>
+        function selectFile(){
+            const files = document.getElementById('file').files
+            console.log('选择的文件====》', files)
+            for (const item of files) {
+                console.log(item)
+                let formDate = new FormData()
+                formDate.append('file',item)
+                $.ajax({
+                    type: "POST", // 数据提交类型
+                    url: "http://localhost:3000/api/fileUploadVideo", // 发送地址
+                    data: formDate, //发送数据
+                    async: true, // 是否异步
+                    processData: false, //processData 默认为false，当设置为true的时候,jquery ajax 提交的时候不会序列化 data，而是直接使用data
+                    contentType: false //
+                })
+            }
+        }
+    </script>
+</body>
+</html>
