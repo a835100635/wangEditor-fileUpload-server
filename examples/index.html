@@ -1,31 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 </head>
+
 <body>
     <input type="file" id="file" onchange="selectFile()">
     <script>
-        function selectFile(){
+
+        const fileName = 'file_';
+
+        async function selectFile() {
             const files = document.getElementById('file').files
             console.log('选择的文件====》', files)
             for (const item of files) {
                 console.log(item)
-                let formDate = new FormData()
-                formDate.append('file',item)
-                $.ajax({
-                    type: "POST", // 数据提交类型
-                    url: "http://localhost:3000/api/fileUploadVideo", // 发送地址
-                    data: formDate, //发送数据
-                    async: true, // 是否异步
-                    processData: false, //processData 默认为false，当设置为true的时候,jquery ajax 提交的时候不会序列化 data，而是直接使用data
-                    contentType: false //
-                })
+
+                // 获取文件名
+                const fileName_ = item.name;
+
+                // 1、生成切片
+                const fileChunkList = createFileChunk(item, size = 1024 * 1024);
+
+                // 上传文件
+                const requestList = fileChunkList.map(({ file, hash }) => {
+                    const formData = new FormData();
+                    formData.append("file", file);
+                    formData.append("hash", hash);
+                    formData.append("filename", fileName_);
+                    return { formData };
+                }).map(async ({ formData }) => {
+                    return uploadAction(formData)
+                });
+
+                const data = await Promise.all(requestList);
+                console.log(data);
+
+                if(data.length!==0){
+                    await mergeRequest(fileName_,data[0].filePath);
+                }
+               
             }
+        }
+
+        // 上传文件函数
+        function uploadAction(item) {
+            return $.ajax({
+                type: "POST", // 数据提交类型
+                url: "http://localhost:3000/api/fileUploadVideo", // 发送地址
+                data: item, //发送数据
+                async: true, // 是否异步
+                processData: false, //processData 默认为false，当设置为true的时候,jquery ajax 提交的时候不会序列化 data，而是直接使用data
+                contentType: false //
+            })
+        }
+
+        // 1、生成切片
+        function createFileChunk(file, size) {
+            const fileChunkList = [];
+            let cur = 0;
+            let index = 0;
+            while (cur < file.size) {
+                fileChunkList.push({
+                    file: file.slice(cur, cur + size),
+                    hash: file.name + '-' + index
+                });
+                index += 1
+                cur += size;
+            }
+            console.log('生成的切片：', fileChunkList)
+            return fileChunkList;
+        }
+
+        // 2、合并切片
+        function mergeRequest(fileName,filePath) {
+            $.ajax({
+                type: "POST", // 数据提交类型
+                url: "http://localhost:3000/api/merge", // 发送地址
+                data: JSON.stringify({
+                    fileName,
+                    filePath
+                }),
+                async: true,
+                processData: false, 
+                contentType: false 
+            })
         }
     </script>
 </body>
+
 </html>
