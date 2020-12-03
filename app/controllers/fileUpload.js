@@ -2,12 +2,13 @@
  *  文件上传模块
  */
 
-const uuId = require('uuid');
 const fse = require('fs-extra');
 const multiparty = require('multiparty');
 const { uploadDir } = require('../../config');
 const path = require('path');
+const uuid = require('node-uuid');
 
+const pieceFolder = '-piece'
 
 module.exports = {
   // 上传切片
@@ -41,10 +42,13 @@ module.exports = {
       }
       const [file] = files.file;
       const [hash] = fields.hash;
-      const [filename] = fields.filename;
+      let [filename] = fields.filename;
+      
+      // 处理文件名称 区分切片文件夹与真文件夹
+      filename = filename+pieceFolder
 
       const chunkDir = path.resolve(uploadPath, filename);
-      console.log('目标保存地址=======》', chunkDir)
+      console.log('切片文件存放文件夹路径------------>', chunkDir)
 
       // 切片目录不存在，创建切片目录
       if (!fse.existsSync(chunkDir)) {
@@ -72,17 +76,72 @@ module.exports = {
 
   // 合并文件
   mergeFile: async (req, res) => {
-    console.log('合并请求', req.body);
-    const { fileName, filePath } = req.body;
+    console.log('请求合并接口 && 收到的参数------------>', req.body);
+    const { filePath } = req.body;
 
-   
+    // 生成uuid 防止文件重名命
+    let uuId = uuid.v4().replace('-', '');
 
+    const chunkDir = path.resolve(__dirname, `../../${filePath}`, );
+    console.log('切片文件夹------------>', chunkDir)
+
+    const chunkPaths = await fse.readdir(chunkDir);
+    console.log('切片文件集合------------>', chunkPaths);
+
+    // 进行排序 保证顺序的准确
+    chunkPaths.sort((a, b) => a.split("-")[1] - b.split("-")[1]);
+
+    const pipeStream = (path, writeStream) => {
+      console.log('处理的切片路劲------------>',path);
+       return new Promise((resolve,reject) => {
+       try{
+          // 读文件流
+        const readStream = fse.createReadStream(path);
+        // 写入文件流完成后 删除文件切片
+        readStream.on("end", () => {
+          fse.unlinkSync(path);
+          resolve();
+        });
+        // 写入文件流
+        readStream.pipe(writeStream);
+        } catch(err) {
+          reject();
+        }
+      });
+    }
+    
+    // 生成uuid 为文件的文件路径
+    const format = '.'+filePath.replace(pieceFolder,'').split('.')[1];
+    let  newFilePath = (filePath.replace(pieceFolder,'').split('.')[0]).split('/');
+    newFilePath[newFilePath.length-1] = uuId;
+    newFilePath = newFilePath.join('/') + format;
+    console.log('生成uuid 防止文件重名命----->', newFilePath);
+
+    await Promise.all(
+      chunkPaths.map((chunkPath, index) =>
+        pipeStream(
+
+          // 切片的路径
+          path.resolve(chunkDir, chunkPath),
+
+          // 生成文件 指定位置创建可写流
+          fse.createWriteStream(newFilePath, {
+            start: index * (1024 * 1024),
+            end: (index + 1) * (1024 * 1024)
+          })
+        )
+      )
+    ).then((result)=>{
+        console.log('合并切片成功------------>', result);
+        fse.rmdirSync(chunkDir); // 合并后删除保存切片的目录
+    });
 
     res.send({
       code: '10000',
-      msg: '上传成功'
-    })
-  }
+      msg: '上传成功',
+      path: filePath.replace(pieceFolder,'')
+    });
 
+  }
 }
 

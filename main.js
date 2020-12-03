@@ -11,7 +11,7 @@ let app = express();
 
 //设置跨域访问 
 app.all('*', (req, res, next) => {
-    console.log('访问url====》 ', req.url)
+    console.log('访问url------------> ', req.url)
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With");
     res.header("Access-Control-Allow-Methods", "POST", "GET");
