@@ -1,6 +1,5 @@
 const express = require('express');
 const bodyParser = require('body-parser'); //express分离body参数 
-const path = require('path');
 const fs = require('fs');
 const {
     Port,staticDir,uploadDir

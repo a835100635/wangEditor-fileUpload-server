@@ -77,7 +77,7 @@ module.exports = {
   // 合并文件
   mergeFile: async (req, res) => {
     console.log('请求合并接口 && 收到的参数------------>', req.body);
-    const { filePath } = req.body;
+    const { filePath, pieceSize } = req.body;
 
     // 生成uuid 防止文件重名命
     let uuId = uuid.v4().replace('-', '');
@@ -126,8 +126,8 @@ module.exports = {
 
           // 生成文件 指定位置创建可写流
           fse.createWriteStream(newFilePath, {
-            start: index * (1024 * 1024),
-            end: (index + 1) * (1024 * 1024)
+            start: index * pieceSize,
+            end: (index + 1) * pieceSize
           })
         )
       )

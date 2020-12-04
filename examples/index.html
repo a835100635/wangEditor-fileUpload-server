@@ -12,7 +12,8 @@
     <input type="file" id="file" onchange="selectFile()">
     <script>
 
-        const fileName = 'file_';
+        // 生成切片大小
+        const pieceSize = 1024 * 1024;
 
         async function selectFile() {
             const files = document.getElementById('file').files
@@ -21,17 +22,17 @@
                 console.log(item)
 
                 // 获取文件名
-                const fileName_ = item.name;
+                const fileName = item.name;
 
                 // 1、生成切片
-                const fileChunkList = createFileChunk(item, size = 1024 * 1024);
+                const fileChunkList = createFileChunk(item, pieceSize);
 
                 // 上传文件
                 const requestList = fileChunkList.map(({ file, hash }) => {
                     const formData = new FormData();
-                    formData.append("file", file);
-                    formData.append("hash", hash);
-                    formData.append("filename", fileName_);
+                    formData.append("file", file); // 文件切片
+                    formData.append("hash", hash); // 文件切片名称 （文件名字+切片index 组合）
+                    formData.append("filename", fileName); // 文件名称
                     return { formData };
                 }).map(async ({ formData }) => {
                     return uploadAction(formData)
@@ -40,8 +41,8 @@
                await Promise.all(requestList).then(async (data)=>{
                     console.log(data)
                     await mergeRequest(data[0].filePath);
-                }).catch(()=>{
-                    console.log('上传失败，稍后重试');
+                }).catch((err)=>{
+                    console.log('上传失败，稍后重试',err);
                 });
                
             }
@@ -91,7 +92,8 @@
                 type: "POST", // 数据提交类型
                 url: "http://localhost:3000/api/merge", // 发送地址
                 data: JSON.stringify({
-                    filePath: filePath
+                    filePath: filePath,
+                    pieceSize:pieceSize
                 }),
                 headers: {
                     "Content-Type": "application/json"
