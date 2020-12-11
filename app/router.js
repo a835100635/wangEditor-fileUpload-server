@@ -13,4 +13,6 @@ router.post('/api/fileUploadVideo', bodyParser.urlencoded({
 // 合并切片
 router.post('/api/merge', FileController.mergeFile);
 
+// 校验文件是否已经上传
+router.post('/api/verify', FileController.verifyFile)
 module.exports = router;

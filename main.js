@@ -24,6 +24,9 @@ console.log('静态访问地址头----> ' ,staticDir)
 // 静态文件
 app.use(express.static(staticDir));
 
+// 访问js
+app.use('/js', express.static('examples/js'));
+
 // html页面访问
 app.get('/', (req, res) => {
     res.writeHead(200, {

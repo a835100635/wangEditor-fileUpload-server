@@ -6,7 +6,6 @@ const fse = require('fs-extra');
 const multiparty = require('multiparty');
 const { uploadDir } = require('../../config');
 const path = require('path');
-const uuid = require('node-uuid');
 
 const pieceFolder = '-piece'
 
@@ -40,14 +39,16 @@ module.exports = {
         })
         return;
       }
-      const [file] = files.file;
-      const [hash] = fields.hash;
-      let [filename] = fields.filename;
+      const [ file ] = files.file;
+      console.log('file-size------------>', file.size)
+      const [ hash ] = fields.hash;
+      const [ fileHash ] = fields.fileHash;
+      console.log('fileHash--->', fileHash);
       
       // 处理文件名称 区分切片文件夹与真文件夹
-      filename = filename+pieceFolder
+      let fileDirName = fileHash + pieceFolder;
 
-      const chunkDir = path.resolve(uploadPath, filename);
+      const chunkDir = path.resolve(uploadPath, fileDirName);
       console.log('切片文件存放文件夹路径------------>', chunkDir)
 
       // 切片目录不存在，创建切片目录
@@ -68,7 +69,7 @@ module.exports = {
       res.send({
         code: '10000',
         msg: '上传成功',
-        filePath: dataPath + filename
+        filePath: dataPath + fileDirName
       })
 
     });
@@ -77,11 +78,14 @@ module.exports = {
   // 合并文件
   mergeFile: async (req, res) => {
     console.log('请求合并接口 && 收到的参数------------>', req.body);
-    const { filePath, pieceSize } = req.body;
-
-    // 生成uuid 防止文件重名命
-    let uuId = uuid.v4().replace('-', '');
-
+    const { filePath, pieceSize, fileName } = req.body;
+    if(!filePath){
+      res.send({
+        code: '10001',
+        msg: '缺少参数 filePath',
+      });
+      return;
+    }
     const chunkDir = path.resolve(__dirname, `../../${filePath}`, );
     console.log('切片文件夹------------>', chunkDir)
 
@@ -111,11 +115,9 @@ module.exports = {
     }
     
     // 生成uuid 为文件的文件路径
-    const format = '.'+filePath.replace(pieceFolder,'').split('.')[1];
     let  newFilePath = (filePath.replace(pieceFolder,'').split('.')[0]).split('/');
-    newFilePath[newFilePath.length-1] = uuId;
-    newFilePath = newFilePath.join('/') + format;
-    console.log('生成uuid 防止文件重名命----->', newFilePath);
+    newFilePath = newFilePath.join('/') + '.' +fileName.split('.')[1];
+    console.log('生成文件名---->', newFilePath);
 
     await Promise.all(
       chunkPaths.map((chunkPath, index) =>
@@ -139,9 +141,14 @@ module.exports = {
     res.send({
       code: '10000',
       msg: '上传成功',
-      path: filePath.replace(pieceFolder,'')
+      path: newFilePath
     });
 
+  },
+
+  // 核实文件切片或文件已经存在
+  verifyFile: (req, res) => {
+    
   }
 }
 
