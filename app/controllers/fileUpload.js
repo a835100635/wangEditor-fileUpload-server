@@ -12,19 +12,27 @@ const pieceFolder = '-piece'
 module.exports = {
   // 上传切片
   uploadFile: (req, res) => {
-    // 初始时间
+
+    // 初始时间 
     const nowTime = new Date();
     const Year = nowTime.getFullYear();
     const Month = nowTime.getMonth() + 1;
     const Day = nowTime.getDate();
     const Hours = nowTime.getHours();
     const dataPath = `${uploadDir}/${Year}/${Month}/${Day}/${Hours}/`
+
     // 生成存储文件夹 日期为目录  方便后期寻找
     const uploadPath = path.resolve(__dirname, '../../', dataPath);
 
     const multipart = new multiparty.Form();
 
+    /**
+     * 解析FormData  利用parse()方法来解析
+     * fields 存储着FormData里的字段信息
+     * files 存储着FormData里的字段信息
+     */
     multipart.parse(req, async (err, fields, files) => {
+      // 判断错误 文件是否存在
       if (err) {
         res.send({
           code: '10001',
@@ -39,11 +47,11 @@ module.exports = {
         })
         return;
       }
+
       const [ file ] = files.file;
-      console.log('file-size------------>', file.size)
       const [ hash ] = fields.hash;
       const [ fileHash ] = fields.fileHash;
-      console.log('fileHash--->', fileHash);
+      console.log('上传文件收到的参数------------>', files)
       
       // 处理文件名称 区分切片文件夹与真文件夹
       let fileDirName = fileHash + pieceFolder;
@@ -101,20 +109,28 @@ module.exports = {
        try{
           // 读文件流
         const readStream = fse.createReadStream(path);
+
         // 写入文件流完成后 删除文件切片
         readStream.on("end", () => {
-          fse.unlinkSync(path);
+
+          // fse.unlinkSync(path);
           resolve();
+
         });
+
         // 写入文件流
         readStream.pipe(writeStream);
+
         } catch(err) {
+
           reject();
+
         }
+
       });
     }
     
-    // 生成uuid 为文件的文件路径
+    // 生成文件的文件路径
     let  newFilePath = (filePath.replace(pieceFolder,'').split('.')[0]).split('/');
     newFilePath = newFilePath.join('/') + '.' +fileName.split('.')[1];
     console.log('生成文件名---->', newFilePath);
@@ -135,7 +151,7 @@ module.exports = {
       )
     ).then((result)=>{
         console.log('合并切片成功------------>', result);
-        fse.rmdirSync(chunkDir); // 合并后删除保存切片的目录
+        // fse.rmdirSync(chunkDir); // 合并后删除保存切片的目录
     });
 
     res.send({

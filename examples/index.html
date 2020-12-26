@@ -21,9 +21,9 @@
         // 回调函数 返回进度
         function callback(ev){
             console.log(ev)
-            // return e => {
-            //     console.log(e,parseInt(String((e.loaded / e.total) * 100)))
-            // }
+            return e => {
+                console.log(e,parseInt(String((e.loaded / e.total) * 100)))
+            }
         }
     </script>
 </body>
